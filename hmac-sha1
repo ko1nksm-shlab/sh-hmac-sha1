@@ -1,0 +1,22 @@
+#!/bin/sh
+
+set -eu
+
+. ./hmac-sha1.sh
+
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 <key-file>"
+  echo
+  echo "Example:"
+  echo "\$ printf '%s' value | $0 <(printf '%s' secret_key)"
+  echo "b75db159dc00e1e84e251a1ea6176359e7427901"
+  exit 1
+fi
+
+key=$(cat "$1" && echo _)
+key=${key%_}
+
+msg=$(cat && echo _)
+msg=${msg%_}
+
+hmac_sha1 "$key" "$msg"
