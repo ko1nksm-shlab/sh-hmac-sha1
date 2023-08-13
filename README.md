@@ -27,6 +27,7 @@ sh-hmac-sha1 is a shell script **library**. Shell functions do not reveal secret
 #!/bin/sh
 . ./hmac-sha1.sh
 hmac_sha1 "secret_key" "value" # => b75db159dc00e1e84e251a1ea6176359e7427901
+hmac_sha1_bin "secret_key" "value" | base64 # => t12xWdwA4ehOJRoephdjWedCeQE=
 ```
 
 Equivalent to below.
@@ -34,6 +35,9 @@ Equivalent to below.
 ```console
 $ printf '%s' "value" | openssl dgst -sha1 -hmac "secret_key"
 SHA1(stdin)= b75db159dc00e1e84e251a1ea6176359e7427901
+
+$ printf '%s' "value" | openssl dgst -sha1 -hmac "secret_key" -binary | base64
+t12xWdwA4ehOJRoephdjWedCeQE=
 ```
 
 The included `hmac-sha1` is just a bonus. It is an example implementation.
@@ -41,4 +45,7 @@ The included `hmac-sha1` is just a bonus. It is an example implementation.
 ```console
 $ printf '%s' value | ./hmac-sha1 <(printf '%s' secret_key)
 b75db159dc00e1e84e251a1ea6176359e7427901
+
+$ printf '%s' value | ./hmac-sha1 <(printf '%s' secret_key) --binary | base64
+t12xWdwA4ehOJRoephdjWedCeQE=
 ```

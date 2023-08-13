@@ -28,7 +28,7 @@ uint32_hex() {
   eval "$1=\$5"
 }
 
-str2hex() {
+bin2hex() {
   # Avoid executing printf external command with mksh
   # All ksh compatible shells have a print internal command
   if [ "${KSH_VERSION:-}" ]; then
@@ -36,6 +36,19 @@ str2hex() {
   else
     printf '%s' "$1"
   fi | LC_ALL=C od -v -An -tx1 | LC_ALL=C tr -d ' \n'
+}
+
+hex2bin() {
+  set -- "$1" ""
+  while [ "$1" ]; do
+    set -- "${1#??}" "$2" "0x${1%"${1#??}"}"
+    set -- "$1" "$2\\$(( $3 / 64 ))$(( ($3 % 64) / 8 ))$(( $3 % 8 ))"
+  done
+  printf "$2"
+}
+
+hmac_sha1_bin() {
+  hex2bin "$(hmac_sha1 "$1" "$2")"
 }
 
 ##########################################################################
@@ -46,8 +59,8 @@ hmac_sha1() {
   (
     unset key msg i hex ipad opad
     key=$1 msg=$2 i='' hex='' ipad='' opad=''
-    key=$(str2hex "$key")
-    msg=$(str2hex "$msg")
+    key=$(bin2hex "$key")
+    msg=$(bin2hex "$msg")
 
     # Compute the block sized key
     #   key needs to be same as sha1 blocksize

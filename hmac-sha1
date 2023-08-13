@@ -5,7 +5,7 @@ set -eu
 . ./hmac-sha1.sh
 
 if [ $# -eq 0 ]; then
-  echo "Usage: $0 <key-file>"
+  echo "Usage: $0 <key-file> [--binary]"
   echo
   echo "Example:"
   echo "\$ printf '%s' value | $0 <(printf '%s' secret_key)"
@@ -19,4 +19,8 @@ key=${key%_}
 msg=$(cat && echo _)
 msg=${msg%_}
 
-hmac_sha1 "$key" "$msg"
+if [ "${2:-}" = "--binary" ]; then
+  hmac_sha1_bin "$key" "$msg"
+else
+  hmac_sha1 "$key" "$msg"
+fi
