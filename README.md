@@ -28,6 +28,7 @@ sh-hmac-sha1 is a shell script **library**. Shell functions do not reveal secret
 . ./hmac-sha1.sh
 hmac_sha1 "secret_key" "value" # => b75db159dc00e1e84e251a1ea6176359e7427901
 hmac_sha1_bin "secret_key" "value" | base64 # => t12xWdwA4ehOJRoephdjWedCeQE=
+hmac_sha1_base64 "secret_key" "value" # => t12xWdwA4ehOJRoephdjWedCeQE=
 ```
 
 Equivalent to below.
@@ -44,7 +45,7 @@ The included `hmac-sha1` is just a bonus. It is an example implementation.
 
 ```console
 $ ./hmac-sha1 --help
-Usage: ./hmac-sha1 [-b | --binary] [<key-file>]
+Usage: ./hmac-sha1 [--binary | --base64] [<key-file>]
 
 Example:
 
@@ -55,5 +56,8 @@ $ printf '%s' value | KEY=secret_key ./hmac-sha1
 b75db159dc00e1e84e251a1ea6176359e7427901
 
 $ printf '%s' value | ./hmac-sha1 --binary <(printf '%s' secret_key) | base64
+t12xWdwA4ehOJRoephdjWedCeQE=
+
+$ printf '%s' value | ./hmac-sha1 --base64 <(printf '%s' secret_key)
 t12xWdwA4ehOJRoephdjWedCeQE=
 ```

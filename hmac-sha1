@@ -21,6 +21,9 @@ b75db159dc00e1e84e251a1ea6176359e7427901
 $ printf '%s' value | ./hmac-sha1 --binary <(printf '%s' secret_key) | base64
 t12xWdwA4ehOJRoephdjWedCeQE=
 
+$ printf '%s' value | ./hmac-sha1 --base64 <(printf '%s' secret_key)
+t12xWdwA4ehOJRoephdjWedCeQE=
+
 HERE
 }
 
