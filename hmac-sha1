@@ -35,7 +35,7 @@ fi
 func="hmac_sha1"
 case ${1:-} in
   -h | --help) usage && exit 0 ;;
-  --binary) func="hmac_sha1_bin" && shift ;;
+  --binary) func="hmac_sha1_binary" && shift ;;
   --base64) func="hmac_sha1_base64" && shift ;;
   -*) echo "Unknown option $1" >&2 && exit 1 ;;
 esac

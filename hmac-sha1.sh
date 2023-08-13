@@ -47,7 +47,7 @@ hex2str() {
   printf "$2"
 }
 
-hmac_sha1_bin() {
+hmac_sha1_binary() {
   hex2str "$(hmac_sha1 "$1" "$2")"
 }
 
