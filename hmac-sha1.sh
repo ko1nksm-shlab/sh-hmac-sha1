@@ -12,17 +12,17 @@ uint32_bin() {
 
 uint32_hex() {
   set -- "$1" $(($2 & 0xFFFFFFFF)) 0 7 ""
-  [ "$2" -lt 0 ] && set -- "$1" $((0x7FFFFFFF - (${2#-} - 1))) 8 "$4" "$5"
+  [ "$2" -lt 0 ] && set -- "$1" $(( 0x7FFFFFFF - (${2#-} - 1) )) 8 "$4" "$5"
   while [ "$4" -ge 0 ]; do
-    set -- "$1" $(($2 | (($4 == 0) * $3) )) "$3" "$4" "$5"
+    set -- "$1" $(( $2 | (($4 == 0) * $3) )) "$3" $(($4 - 1)) "$5"
     case $(($2 % 16)) in
-      ?) set -- "$1" $(($2 / 16)) "$3" $(($4 - 1)) "$(($2 % 16))$5" ;;
-      10) set -- "$1" $(($2 / 16)) "$3" $(($4 - 1)) "a$5" ;;
-      11) set -- "$1" $(($2 / 16)) "$3" $(($4 - 1)) "b$5" ;;
-      12) set -- "$1" $(($2 / 16)) "$3" $(($4 - 1)) "c$5" ;;
-      13) set -- "$1" $(($2 / 16)) "$3" $(($4 - 1)) "d$5" ;;
-      14) set -- "$1" $(($2 / 16)) "$3" $(($4 - 1)) "e$5" ;;
-      15) set -- "$1" $(($2 / 16)) "$3" $(($4 - 1)) "f$5" ;;
+      ?) set -- "$1" $(($2 / 16)) "$3" "$4" "$(($2 % 16))$5" ;;
+      10) set -- "$1" $(($2 / 16)) "$3" "$4" "a$5" ;;
+      11) set -- "$1" $(($2 / 16)) "$3" "$4" "b$5" ;;
+      12) set -- "$1" $(($2 / 16)) "$3" "$4" "c$5" ;;
+      13) set -- "$1" $(($2 / 16)) "$3" "$4" "d$5" ;;
+      14) set -- "$1" $(($2 / 16)) "$3" "$4" "e$5" ;;
+      15) set -- "$1" $(($2 / 16)) "$3" "$4" "f$5" ;;
     esac
   done
   eval "$1=\$5"
@@ -31,18 +31,17 @@ uint32_hex() {
 str2hex() {
   # Avoid executing printf external command with mksh
   # All ksh compatible shells have a print internal command
-  if [ "${KSH_VERSION:-}" ]; then
-    print -nr -- "$1"
-  else
-    printf '%s' "$1"
-  fi | LC_ALL=C od -v -An -tx1 | LC_ALL=C tr -d ' \n'
+  case ${KSH_VERSION:+x} in
+    x) print -nr -- "$1" ;;
+    *) printf '%s' "$1" ;;
+  esac | LC_ALL=C command od -v -An -tx1 | LC_ALL=C command tr -d ' \n'
 }
 
 hex2str() {
   set -- "$1" ""
   while [ "$1" ]; do
     set -- "${1#??}" "$2" "0x${1%"${1#??}"}"
-    set -- "$1" "$2\\$(( $3 / 64 ))$(( ($3 % 64) / 8 ))$(( $3 % 8 ))"
+    set -- "$1" "$2\\$(($3 / 64))$(( ($3 % 64) / 8 ))$(($3 % 8))"
   done
   printf "$2"
 }
@@ -53,14 +52,14 @@ hmac_sha1_binary() {
 
 hmac_sha1_base64() {
   (
-    unset hmac base64 len chunk bits bin n
+    unset hmac base64 len chunk bits bin n p q
     hmac=$(hmac_sha1 "$1" "$2")
     set -- 0 1 2 3 4 5 6 7 8 9 + /
     set -- a b c d e f g h i j k l m n o p q r s t u v w x y z "$@"
     set -- A B C D E F G H I J K L M N O P Q R S T U V W X Y Z "$@"
-    base64='' len=$(( ${#hmac} % 6 ))
-    [ "$len" -eq 2 ] && hmac="${hmac}0000"
-    [ "$len" -eq 4 ] && hmac="${hmac}00"
+    base64='' len=$((${#hmac} % 6)) p='' q=''
+    [ "$len" -eq 2 ] && hmac="${hmac}0000" p='==' q='AA'
+    [ "$len" -eq 4 ] && hmac="${hmac}00" p='=' q='A'
     while [ "$hmac" ]; do
       chunk=${hmac%"${hmac#??????}"} && hmac=${hmac#??????}
       uint32_bin bits $((0x$chunk))
@@ -74,9 +73,7 @@ hmac_sha1_base64() {
         eval "base64=\${base64}\${$((n + 1))}"
       done
     done
-    [ "$len" -eq 2 ] && base64="${base64%??}=="
-    [ "$len" -eq 4 ] && base64="${base64%?}="
-    echo "$base64"
+    echo "${base64%"$q"}${p}"
   )
 }
 
@@ -86,32 +83,24 @@ hmac_sha1_base64() {
 ##########################################################################
 hmac_sha1() {
   (
-    unset key msg i hex ipad opad
-    key=$1 msg=$2 i='' hex='' ipad='' opad=''
+    unset key msg n hex ipad opad
+    key=$1 msg=$2 n='' hex='' ipad='' opad=''
     key=$(str2hex "$key")
     msg=$(str2hex "$msg")
 
     # Compute the block sized key
     #   key needs to be same as sha1 blocksize
-    if [ ${#key} -gt 128 ]; then
-      key=$(hash_sha1 "$key")
-    fi
+    [ ${#key} -gt 128 ] && key=$(hash_sha1 "$key")
     while [ ${#key} -lt 128 ]; do
       key="${key}00"
     done
 
     # xor key 32-bit at a time
-    set --
     while [ "$key" ]; do
-      set -- "$@" "${key%"${key#????????}"}"
-      key=${key#????????}
-    done
-    for i in "$@"; do
-      uint32_hex hex $(( ( 0x$i ^ 0x5C5C5C5C ) & 0xFFFFFFFF ))
+      n="${key%"${key#????????}"}" && key=${key#????????}
+      uint32_hex hex $(( (0x$n ^ 0x5C5C5C5C) & 0xFFFFFFFF ))
       opad="${opad}${hex}" # Outer padded key
-    done
-    for i in "$@"; do
-      uint32_hex hex $(( ( 0x$i ^ 0x36363636 ) & 0xFFFFFFFF ))
+      uint32_hex hex $(( (0x$n ^ 0x36363636) & 0xFFFFFFFF ))
       ipad="${ipad}${hex}" # Inner padded key
     done
 
@@ -126,7 +115,6 @@ hmac_sha1() {
 hash_sha1() {
   (
     unset pad len
-
     # Pre-processing:
     pad=80 len=${#1}
     until [ $(( (len + ${#pad}) % 128 )) -eq 112 ]; do
@@ -135,15 +123,13 @@ hash_sha1() {
     # The message size is limited to 4GB, but would be large enough
     uint32_hex len $((len << 2))
     echo "${1}${pad}00000000${len}"
-  ) | LC_ALL=C fold -w128 | ( # 128 hex chars = 512-bit chunks
+  ) | LC_ALL=C command fold -w128 | ( # 128 hex chars = 512-bit chunks
     unset h0 h1 h2 h3 h4 chunk temp a b c d e i m f k w
-    i=0
+    i=0 m=$((0xFFFFFFFF)) # 32-bit mask
     while [ "$i" -lt 80 ]; do
       unset "w$i"
       i=$((i + 1))
     done
-
-    m=$((0xFFFFFFFF)) # 32-bit mask
 
     # Initialize variables:
     h0=$((0x67452301))
@@ -157,7 +143,7 @@ hash_sha1() {
       i=0
       while [ "$chunk" ]; do
         # convert to 32-bit int now
-        : $((w$i = 0x${chunk%"${chunk#????????}"} ))
+        : $((w$i = 0x${chunk%"${chunk#????????}"}))
         chunk=${chunk#????????}
         i=$((i + 1))
       done
@@ -165,7 +151,7 @@ hash_sha1() {
       # Message schedule:
       #   extend the sixteen 32-bit words into eighty 32-bit words:
       while [ "$i" -le 79 ]; do
-        : $((w = w$((i-3)) ^ w$((i-8)) ^ w$((i-14)) ^ w$((i-16)) ))
+        : $(( w = w$((i-3)) ^ w$((i-8)) ^ w$((i-14)) ^ w$((i-16)) ))
         # left rotate 1 with shift
         if [ "$w" -lt 0 ]; then
           # Workaround for unsigned 32-bit integer shell (e.g. mksh)
