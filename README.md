@@ -1,6 +1,6 @@
 # sh-hmac-sha1
 
-This is hmac-sha1 implemented in a shell script.
+This is HMAC-SHA1 implemented in a shell script.
 
 **Note**: The implementation of `hash_sha1` was taken from [bash-totp](https://github.com/neutronscott/bash-totp) and rewritten for the POSIX shell.
 
@@ -43,9 +43,17 @@ t12xWdwA4ehOJRoephdjWedCeQE=
 The included `hmac-sha1` is just a bonus. It is an example implementation.
 
 ```console
+$ ./hmac-sha1 --help
+Usage: ./hmac-sha1 [-b | --binary] [<key-file>]
+
+Example:
+
 $ printf '%s' value | ./hmac-sha1 <(printf '%s' secret_key)
 b75db159dc00e1e84e251a1ea6176359e7427901
 
-$ printf '%s' value | ./hmac-sha1 <(printf '%s' secret_key) --binary | base64
+$ printf '%s' value | KEY=secret_key ./hmac-sha1
+b75db159dc00e1e84e251a1ea6176359e7427901
+
+$ printf '%s' value | ./hmac-sha1 --binary <(printf '%s' secret_key) | base64
 t12xWdwA4ehOJRoephdjWedCeQE=
 ```
