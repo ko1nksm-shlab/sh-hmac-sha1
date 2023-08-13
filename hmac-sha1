@@ -4,22 +4,49 @@ set -eu
 
 . ./hmac-sha1.sh
 
-if [ $# -eq 0 ]; then
-  echo "Usage: $0 <key-file> [--binary]"
-  echo
-  echo "Example:"
-  echo "\$ printf '%s' value | $0 <(printf '%s' secret_key)"
-  echo "b75db159dc00e1e84e251a1ea6176359e7427901"
+prog=$0
+
+usage() {
+  cat << HERE
+Usage: $prog [-b | --binary] [<key-file>]
+
+Example:
+
+$ printf '%s' value | $prog <(printf '%s' secret_key)
+b75db159dc00e1e84e251a1ea6176359e7427901
+
+$ printf '%s' value | KEY=secret_key $prog
+b75db159dc00e1e84e251a1ea6176359e7427901
+
+$ printf '%s' value | ./hmac-sha1 --binary <(printf '%s' secret_key) | base64
+t12xWdwA4ehOJRoephdjWedCeQE=
+
+HERE
+}
+
+if [ $# -eq 0 ] && [ "${KEY:-}" = "" ]; then
+  usage
   exit 1
 fi
 
-key=$(cat "$1" && echo _)
-key=${key%_}
+binary=false
+case ${1:-} in
+  -h | --help) usage && exit 0 ;;
+  -b | --binary) binary=true && shift ;;
+  -*) echo "Unknown option $1" >&2 && exit 1 ;;
+esac
+
+if [ $# -eq 0 ]; then
+  key="${KEY:?}"
+else
+  key=$(cat "$1" && echo _)
+  key=${key%_}
+fi
 
 msg=$(cat && echo _)
 msg=${msg%_}
 
-if [ "${2:-}" = "--binary" ]; then
+if "$binary"; then
   hmac_sha1_bin "$key" "$msg"
 else
   hmac_sha1 "$key" "$msg"
