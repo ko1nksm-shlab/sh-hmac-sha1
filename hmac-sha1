@@ -8,7 +8,7 @@ prog=$0
 
 usage() {
   cat << HERE
-Usage: $prog [-b | --binary] [<key-file>]
+Usage: $prog [--binary | --base64] [<key-file>]
 
 Example:
 
@@ -29,10 +29,11 @@ if [ $# -eq 0 ] && [ "${KEY:-}" = "" ]; then
   exit 1
 fi
 
-binary=false
+func="hmac_sha1"
 case ${1:-} in
   -h | --help) usage && exit 0 ;;
-  -b | --binary) binary=true && shift ;;
+  --binary) func="hmac_sha1_bin" && shift ;;
+  --base64) func="hmac_sha1_base64" && shift ;;
   -*) echo "Unknown option $1" >&2 && exit 1 ;;
 esac
 
@@ -46,8 +47,4 @@ fi
 msg=$(cat && echo _)
 msg=${msg%_}
 
-if "$binary"; then
-  hmac_sha1_bin "$key" "$msg"
-else
-  hmac_sha1 "$key" "$msg"
-fi
+"$func" "$key" "$msg"

@@ -51,6 +51,35 @@ hmac_sha1_bin() {
   hex2bin "$(hmac_sha1 "$1" "$2")"
 }
 
+hmac_sha1_base64() {
+  (
+    unset hmac base64 len chunk bits bin n
+    hmac=$(hmac_sha1 "$1" "$2")
+    set -- 0 1 2 3 4 5 6 7 8 9 + /
+    set -- a b c d e f g h i j k l m n o p q r s t u v w x y z "$@"
+    set -- A B C D E F G H I J K L M N O P Q R S T U V W X Y Z "$@"
+    base64='' len=$(( ${#hmac} % 6 ))
+    [ "$len" -eq 2 ] && hmac="${hmac}0000"
+    [ "$len" -eq 4 ] && hmac="${hmac}00"
+    while [ "$hmac" ]; do
+      chunk=${hmac%"${hmac#??????}"} && hmac=${hmac#??????}
+      uint32_bin bits $((0x$chunk))
+      bits=${bits#00000000}
+      while [ "$bits" ]; do
+        bin=${bits%"${bits#??????}"} && bits=${bits#??????}
+        n=0
+        while [ "$bin" ]; do
+          n=$(( (n * 2) + ${bin%"${bin#?}"} )) && bin=${bin#?}
+        done
+        eval "base64=\${base64}\${$((n + 1))}"
+      done
+    done
+    [ "$len" -eq 2 ] && base64="${base64%??}=="
+    [ "$len" -eq 4 ] && base64="${base64%?}="
+    echo "$base64"
+  )
+}
+
 ##########################################################################
 # HMAC-SHA1 in POSIX shell
 # Reference implementation from: https://en.wikipedia.org/wiki/HMAC
